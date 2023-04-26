@@ -105,69 +105,20 @@ class auth2fa {
 class usbaccess {
 
     public $id_utilisateur;
-    private $nom_cle;
+    private $id_cle;
     public $date_expiration_cle;
     public $nbr_tentatives_echouees;
     public $verif;
 
-    function __construct($id_utilisateur,$nom_cle,$code_secret,$date_expiration_cle,$nbr_tentatives_echouees,$verif) 
+    function __construct($id_utilisateur,$id_cle,$code_secret,$date_expiration_cle,$nbr_tentatives_echouees,$verif) 
     {
         $this->id_utilisateur = $id_utilisateur;
-        $this->nom_cle  = $nom_cle ;
+        $this->id_cle  = $id_cle ;
         $this->date_expiration_cle = $date_expiration_cle;
         $this->nbr_tentatives_echouees = $nbr_tentatives_echouees;
         $this->verif = $verif;
     }
-    // Fonction de vérification d'authentification
-    public function estAuthentifie() {
-        // Récupérer l'identifiant unique de la clé USB
-        $cle_usb_id = $this->get_cle_usb_id();
-        
-        // Vérifier si l'identifiant de la clé USB est autorisé
-        if ($this->estCleUsbAutorisee($cle_usb_id)) {
-            // Mettre à jour les attributs de la classe
-            $this->date_expiration_cle = $this->getDateExpirationCle();
-            $this->nbr_tentatives_echouees = 0;
-            $this->verif = true;
-            
-           
-            return true;
-        } else {
-          
-            $this->nbr_tentatives_echouees++;
-        
-            $this->verif = false;
-            
-            return false;
-        }
-    }
-    
-    // Fonction pour récupérer l'identifiant unique de la clé USB
-    private function get_cle_usb_id() {
-        // Code pour récupérer l'identifiant unique de la clé USB
-        // ...
-        
-        return $cle_usb_id;
-    }
-    
-    // Fonction pour vérifier si l'identifiant de la clé USB est autorisé
-    private function estCleUsbAutorisee($cle_usb_id) {
-        // Code pour vérifier si l'identifiant de la clé USB est autorisé
-        // ...
-        
-        return $est_autorisee;
-    }
-    
-    // Fonction pour récupérer la date d'expiration de la clé USB
-    private function getDateExpirationCle() {
-        // Code pour récupérer la date d'expiration de la clé USB
-        // ...
-        
-        return $date_expiration;
-    }
 }
-    
-    
 
-
-
+   
+    ?>
