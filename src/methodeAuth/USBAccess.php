@@ -13,6 +13,7 @@
 }
 function authentification_par_cle_usb($id_utilisateur, $nom_cle, $date_expiration_cle, $nbr_tentatives_echouees, $verif) {
     // Vérifier si la clé USB est valide
+    // Vérifier si la clé USB est valide
     if ($date_expiration_cle < time()) {
         $verif = false;
         return $verif;
