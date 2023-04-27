@@ -59,9 +59,7 @@ class Authentification {
             $this->nbr_tentatives_echouees = $nbr_tentatives_echouees;
             $this->verif = $verif;
         }
-        public function getIdUtilisateur() {
-            return $this->id_utilisateur;
-        }
+    
         public function connecter_USB() {
             // Code de la méthode 
         }
