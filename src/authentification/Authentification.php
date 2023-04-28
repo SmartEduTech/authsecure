@@ -1,77 +1,108 @@
-<<?php 
-//crée class authentification 
-class Authentification {
-    protected $id_authentification;
-    protected $id_utilisateur;
-    protected $date_connexion;
-    protected $adresse_ip;
-  
-    public function __construct($id_authentification, Utilisateur $utilisateur, $date_connexion, $adresse_ip) {
-      $this->id_authentification = $id_authentification;
-      $this->id_utilisateur = $utilisateur;
-      $this->date_connexion = $date_connexion;
-      $this->adresse_ip = $adresse_ip;
-    }
-  
- 
-  }
-   // crée class authentification a deux facteurs que hérite la class authentification
-  class auth2fa extends Authentification {
-   
-    public $id_utilisateur;
-    private $mot_de_passe;
-    private $code_secret;
-    public $date_expiration_code;
-    public $nbr_tentatives_echouees;
-    public $verif;
+<?php
 
-    function __construct(Utilisateur $id_utilisateur,$mot_de_passe,$code_secret,$date_expiration_code,$nbr_tentatives_echouees,$verif) 
+class authentification {
+
+    private $utilisateurs;
+    private $connections;
+    private $connection;
+    private $id;
+
+    function __construct($utilisateurs,$connections,$connection,$id) 
     {
-        $this->id_utilisateur = $id_utilisateur;
-        $this->mot_de_passe = $mot_de_passe ;
-        $this->code_secret = $code_secret;
-        $this->date_expiration_code = $date_expiration_code;
-        $this->nbr_tentatives_echouees = $nbr_tentatives_echouees;
-        $this->verif = $verif;
-    }
-    public function Envoyer_code_secret() {
-        // Code de la méthode 
-    }
-    public function verifier_code_secret() {
-        // Code de la méthode 
+        $this->utilisateurs = $utilisateurs;
+        $this->connections = $connections;
+        $this->connection = $connection;
+        $this->id = $id;
     }
     
-}
-  // crée class authentification avec clé usb que hérite la class authentification
-  class usbaccess extends Authentification {
 
-        public $id_utilisateur;
-        private $id_cle;
-        public $date_expiration_cle;
-        public $nbr_tentatives_echouees;
-        public $verif;
+   
+    public function verify($email, $mot_de_passe,$nbr_tentatives_echouees,$est_authentifier) 
+    {
+        foreach ($this->utilisateurs as $utilisateur) {
+            if ($utilisateur->email == $email && $utilisateur->mot_de_passe == $mot_de_passe) 
+            {
+                $utilisateur->est_authentifier = true;
+                $this->nbr_tentatives_echouees = 0;
+
+                return true;
+            }
     
-        function __construct(Utilisateur $id_utilisateur,$id_cle,$code_secret,$date_expiration_cle,$nbr_tentatives_echouees,$verif) 
+            else {
+                $this->nbr_tentatives_echouees += 1;
+                if ($this->nbr_tentatives_echouees >= 3) {
+                    // Bloquer le compte si le nombre de tentatives échouées est supérieur ou égal à 3
+                    $this->est_authentifier = false;
+                }
+                return false;
+            }
+        }
+    }
+
+        public function isConnected()
+
         {
-            $this->id_utilisateur = $id_utilisateur;
-            $this->id_cle = $id_cle ;
-            $this->date_expiration_cle = $date_expiration_cle;
-            $this->nbr_tentatives_echouees = $nbr_tentatives_echouees;
-            $this->verif = $verif;
-        }
-    
-        public function connecter_USB() {
-            // Code de la méthode 
-        }
-        public function deconnecter_USB() {
-            // Code de la méthode 
-        }
-        public function verifier_USB() {
-            // Code de la méthode 
+            return $this->est_authentifier;
         }
 
+        public function getUserById($id) {
+
+
+            foreach ($this->utilisateurs as $utilisateur) {
+        if ($utilisateur->id_utilisateur == $id) {
+            return $utilisateur;
+        }
     }
+    return null; // si l'utilisateur n'est pas trouvé, on retourne null
+}
+        public function InfoUserConnected() {
+            if ($this->isConnected()) {
+                // L'utilisateur est connecté, on renvoie ses informations
+                // On suppose que la variable de session 'id_utilisateur' contient l'ID de l'utilisateur connecté
+                $id_utilisateur = $_SESSION['id_utilisateur']; 
+                $utilisateur = $this->getUserById($id_utilisateur); 
+                return "Utilisateur connecté : ".$utilisateur->nom." ".$utilisateur->prenom." (".$utilisateur->email.")";
+            } else {
+                // Aucun utilisateur n'est connecté
+                return "Aucun utilisateur n'est connecté.";
+            }
+        }
     
-  
 
+    public function getTimeConnect($id_utilisateur) {
+        // Récupération de la dernière connexion de l'utilisateur
+        $last_connection = null;
+        foreach ($this->connections as $connection) {
+            if ($connection->id_utilisateur == $id_utilisateur && (!$last_connection || $connection->date_connexion > $last_connection->date_connexion)) {
+                $last_connection = $connection;
+            }
+        }
+
+        // Retourne la date et l'heure de la dernière connexion
+        if ($last_connection) {
+            return $last_connection->date_connexion;
+        } else {
+            return null;
+        }
+    }
+
+public function deconnecter() {
+
+    if (!$this->isConnected()) {
+
+        return "utilisateur non connecté";
+    }
+    else {
+
+    // Détruire toutes les données de la session
+    session_unset();
+    
+    // Détruire la session
+    session_destroy();
+    
+    // Rediriger vers la page de login
+    header('Location: login.php');
+}
+}
+}
 ?>
