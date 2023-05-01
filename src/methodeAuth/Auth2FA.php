@@ -1,4 +1,7 @@
 <?php 
+/**
+ * Summary of Auth2FA
+ */
 class Auth2FA implements iAuthentification {
   private $utilisateur;
   private $code_secret;
@@ -35,26 +38,26 @@ $result = $mailer->send($message);
 return $code_secret;
 }
 
-  public function Verify($code){
+  public function Verify($code ){
     if($code == $this->code_secret){
-        $this->verif = true;
-        $this->nbr_tentatives_echouees = 0;
-        $this->date_expiration_code = null;
+        $verif = true;
+        $nbr_tentatives_echouees = 0;
+        $date_expiration_code = null;
         return true;
     }
     else{
-        $this->verif = false;
-        $this->nbr_tentatives_echouees += 1;
-        if($this->nbr_tentatives_echouees >= 3){
-            $this->date_expiration_code = date('Y-m-d H:i:s', strtotime('+5 minutes'));
+        $verif = false;
+        $nbr_tentatives_echouees += 1;
+        if($nbr_tentatives_echouees >= 3){
+            $date_expiration_code = date('Y-m-d H:i:s', strtotime('+5 minutes'));
         }
         return false;
     }
 }
 
 
-public function IsConnect(){
-  if($this->verif){
+public function IsConnect($verif){
+  if($verif){
       return true;
   }
   else{
@@ -84,7 +87,6 @@ public function getutilisateurSession(){
       return null;
   }
 }
-
 
  public function getutilisateurInfo(){
     // Récupération des informations de l'utilisateur
