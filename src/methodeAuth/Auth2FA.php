@@ -1,14 +1,15 @@
 <?php 
-/**
- * Summary of Auth2FA
- */
-class Auth2FA implements iAuthentification {
+
+class Auth2FA implements iAuthentification{
   private $utilisateur;
   private $code_secret;
-
-  public function __construct($utilisateur, $code_secret) {
+  private $id_cle;
+ 
+  public function __construct($id_cle, $utilisateur, $code_secret) {
       $this->utilisateur = $utilisateur;
       $this->code_secret = $code_secret;
+      $this->id_cle = $id_cle ;
+     
   }
 
 
@@ -38,7 +39,11 @@ $result = $mailer->send($message);
 return $code_secret;
 }
 
-  public function Verify($code ){
+  public function Verify(){
+    $nbr_tentatives_echouees = 0;
+    // Récupère la valeur du champ 'code_secret' depuis la méthode POST, 
+    // ou met la variable $code à null si cette valeur n'existe pas
+    $code = $_POST['code_secret'] ?? null;
     if($code == $this->code_secret){
         $verif = true;
         $nbr_tentatives_echouees = 0;
@@ -56,31 +61,49 @@ return $code_secret;
 }
 
 
-public function IsConnect($verif){
-  if($verif){
-      return true;
-  }
-  else{
-      return false;
-  }
-}
-public function filterDatautilisateur($utilisateur){
-  // Vérification des données de l'utilisateur
-  $id_utilisateur = filter_var($utilisateur->id_utilisateur, FILTER_SANITIZE_NUMBER_INT);
-  $nom = filter_var($utilisateur->nom, FILTER_SANITIZE_STRING);
-  $prenom = filter_var($utilisateur->prenom, FILTER_SANITIZE_STRING);
-  $email = filter_var($utilisateur->email, FILTER_SANITIZE_EMAIL);
-  $adress = filter_var($utilisateur->adress, FILTER_SANITIZE_STRING);
-  $mot_de_passe = filter_var($utilisateur->mot_de_passe, FILTER_SANITIZE_STRING);
-  $role = filter_var($utilisateur->role, FILTER_SANITIZE_STRING);
-  $est_authentifier = filter_var($utilisateur->est_authentifier, FILTER_SANITIZE_BOOLEAN);
+
+public function IsConnect() {
+    $est_authentifier = true;
+    // Vérifie si l'utilisateur est connecté
+    if ($est_authentifier == true) {
+        return true;
+    }
+    return false;
 }
 
-public function getutilisateurSession(){
+public function filterDataUser(){
+    $utilisateur= new utilisateur ;
+    
+    define('FILTER_SANITIZE_BOOLEAN', 520);
+    define('FILTER_SANITIZE_STRING', 513);
+
+      // Vérification des données de l'utilisateur
+      $id_utilisateur = filter_var($utilisateur->id_utilisateur, FILTER_SANITIZE_NUMBER_INT);
+    $nom = filter_var($utilisateur->nom, FILTER_SANITIZE_STRING);
+    $prenom = filter_var($utilisateur->prenom, FILTER_SANITIZE_STRING);
+    $email = filter_var($utilisateur->email, FILTER_SANITIZE_EMAIL);
+    $adress = filter_var($utilisateur->adress, FILTER_SANITIZE_STRING);
+    $mot_de_passe = filter_var($utilisateur->mot_de_passe, FILTER_SANITIZE_STRING);
+    $role = filter_var($utilisateur->role, FILTER_SANITIZE_STRING);
+    $est_authentifier = filter_var($utilisateur->est_authentifier, FILTER_SANITIZE_BOOLEAN);
+
+    return (object) [
+        'id_utilisateur' => $id_utilisateur,
+        'nom' => $nom,
+        'prenom' => $prenom,
+        'email' => $email,
+        'adress' => $adress,
+        'mot_de_passe' => $mot_de_passe,
+        'role' => $role,
+        'est_authentifier' => $est_authentifier
+    ];
+}
+
+public function getUserSession(){
   // Vérification de la session de l'utilisateur
   if(isset($_SESSION['utilisateur'])){
       $utilisateur = $_SESSION['utilisateur'];
-      $utilisateur = $this->filterDatautilisateur($utilisateur);
+      $utilisateur = $this->filterDataUser($utilisateur);
       return $utilisateur;
   }
   else{
@@ -88,9 +111,9 @@ public function getutilisateurSession(){
   }
 }
 
- public function getutilisateurInfo(){
+ public function getUserInfo(){
     // Récupération des informations de l'utilisateur
-    $utilisateur = $this->getutilisateurSession();
+    $utilisateur = $this->getUserSession();
     if($utilisateur){
         $info = array(
             'id_utilisateur' => $utilisateur->id_utilisateur,
@@ -107,24 +130,28 @@ public function getutilisateurSession(){
     }
 }
 
-  public function cryptInfoutilisateur() {
-      // Crypter les informations confidentielles de l'utilisateur
-      $this->utilisateur->email = md5($this->utilisateur->email);
-      $this->utilisateur->mot_de_passe = md5($this->utilisateur->mot_de_passe);
-  }
 
-  public function decryptInfoutilisateur() {
-      // Décrypter les informations confidentielles de l'utilisateur
-      $this->utilisateur->email = decrypt($this->utilisateur->email);
-      $this->utilisateur->mot_de_passe = decrypt($this->utilisateur->mot_de_passe);
-  }
 
-  public function cookiesutilisateurInfo() {
+  public function cryptInfoUser() {
+    $utilisateur = $this->getUserSession();
+    // Crypte les informations de l'utilisateur
+    $info_crypt = openssl_encrypt(serialize($this->filterDataUser($utilisateur)), 'AES-128-ECB', $this->id_cle);
+    return $info_crypt;
+}
+
+
+public function decryptInfoUser() {
+    // Décrypte les informations de l'utilisateur
+    $info_decrypt = openssl_decrypt($this->verif, 'AES-128-ECB', $this->id_cle);
+    return unserialize($info_decrypt);
+}
+
+  public function cookiesUserInfo() {
       // Stocker des informations d'utilisateur dans un cookie
       setcookie('utilisateur_id', $this->utilisateur->id_utilisateur);
   }
 
-  public function restriction() {
+  public function restrection() {
       // Vérifier que l'utilisateur a les autorisations nécessaires
       if (!$this->utilisateur->role->permissions->contains('permission1')) {
           return false;
