@@ -5,9 +5,9 @@ class utilisateur {
     public $id_utilisateur;
     public $nom;
     public $prenom;
-    private $email;
+    public $email;
     public $adress;
-    private $mot_de_passe;
+    public $mot_de_passe;
     public $role;
     public $est_authentifier;
 }
