@@ -4,11 +4,13 @@ class USBAccess implements iAuthentification {
     private $id_utilisateur;
     private $date_expiration_cle;
     private $token;
+    private $role;
 
-    function __construct($id_cle, $id_utilisateur, $date_expiration_cle) {
+    function __construct($role,$id_cle, $id_utilisateur, $date_expiration_cle) {
         $this->id_cle = $id_cle;
         $this->id_utilisateur = $id_utilisateur;
         $this->date_expiration_cle = $date_expiration_cle;
+        $this->role=$role;
     }
 
     // Generate a new token for USB key authentication
@@ -32,21 +34,23 @@ class USBAccess implements iAuthentification {
         // Return the encrypted token
         return $encrypted_token;
     }
+  
+    public function Verify() {
+        $nbr_tentatives_echouees = 0;
     
-    public function Verify($nbr_tentatives_echouees,$verif ) {
         // Vérifier si l'utilisateur a fourni un jeton valide
         if (!isset($_POST['usb_token']) || empty($_POST['usb_token'])) {
             return false; // Le jeton n'a pas été fourni ou est vide
         }
     
         $token = $_POST['usb_token'];
-        $utilisateur = $this->getutilisateurSession();
+        $utilisateur = $this->getUserSession();
         if (!$utilisateur) {
             return false; // L'utilisateur n'est pas connecté
         }
     
         // Vérifier si l'utilisateur est autorisé à utiliser un jeton USB
-        if (!$this->restriction('utiliser_usb', $utilisateur)) {
+        if (!$this->restrection('USB',$utilisateur)) {
             return false;
         }
     
@@ -74,7 +78,8 @@ class USBAccess implements iAuthentification {
         return true;
     }
 
-    public function IsConnect($est_authentifier ) {
+    public function IsConnect() {
+        $est_authentifier = true;
         // Vérifie si l'utilisateur est connecté
         if ($est_authentifier == true) {
             return true;
@@ -82,74 +87,98 @@ class USBAccess implements iAuthentification {
         return false;
     }
 
-    /**
-     * Summary of filterDatautilisateur
-     * @param mixed $nom
-     * @param mixed $prenom
-     * @param mixed $email
-     * @param mixed $adresse
-     * @param mixed $role
-     * @param mixed $est_authentifier
-     * @param mixed $date_connexion
-     * @return array|bool|null
-     */
-    public function filterDatautilisateur($nom,$prenom,$email,$adresse,$role,$est_authentifier,$date_connexion) {
-        // Retourne les informations de l'utilisateur filtrées
-        return filter_var_array([
-            'id_utilisateur' => $this->id_utilisateur,
+ 
+    public function filterDataUser(){
+        $utilisateur= new utilisateur ;
+        
+        define('FILTER_SANITIZE_BOOLEAN', 520);
+        define('FILTER_SANITIZE_STRING', 513);
+    
+          // Vérification des données de l'utilisateur
+          $id_utilisateur = filter_var($utilisateur->id_utilisateur, FILTER_SANITIZE_NUMBER_INT);
+        $nom = filter_var($utilisateur->nom, FILTER_SANITIZE_STRING);
+        $prenom = filter_var($utilisateur->prenom, FILTER_SANITIZE_STRING);
+        $email = filter_var($utilisateur->email, FILTER_SANITIZE_EMAIL);
+        $adress = filter_var($utilisateur->adress, FILTER_SANITIZE_STRING);
+        $mot_de_passe = filter_var($utilisateur->mot_de_passe, FILTER_SANITIZE_STRING);
+        $role = filter_var($utilisateur->role, FILTER_SANITIZE_STRING);
+        $est_authentifier = filter_var($utilisateur->est_authentifier, FILTER_SANITIZE_BOOLEAN);
+    
+        return (object) [
+            'id_utilisateur' => $id_utilisateur,
             'nom' => $nom,
             'prenom' => $prenom,
             'email' => $email,
-            'adresse' => $adresse,
+            'adress' => $adress,
+            'mot_de_passe' => $mot_de_passe,
             'role' => $role,
-            'est_authentifier' => $est_authentifier,
-            'date_connexion' => $date_connexion
-        ], FILTER_SANITIZE_STRING);
+            'est_authentifier' => $est_authentifier
+        ];
     }
-
-    public function getutilisateurSession() {
-        // Retourne les informations de l'utilisateur stockées dans la session
-        return $_SESSION['utilisateur'];
+    
+    
+    public function getUserSession(){
+      // Vérification de la session de l'utilisateur
+      if(isset($_SESSION['utilisateur'])){
+          $utilisateur = $_SESSION['utilisateur'];
+          $utilisateur = $this->filterDataUser($utilisateur);
+          return $utilisateur;
+      }
+      else{
+          return null;
+      }
     }
-
-    public function getutilisateurInfo() {
-        // Retourne les informations de l'utilisateur filtrées et stockées dans la session
-        $_SESSION['utilisateur'] = filterDatautilisateur();
-        return $_SESSION['utilisateur'];
+    
+     public function getUserInfo(){
+        // Récupération des informations de l'utilisateur
+        $utilisateur = $this->getUserSession();
+        if($utilisateur){
+            $info = array(
+                'id_utilisateur' => $utilisateur->id_utilisateur,
+                'nom' => $utilisateur->nom,
+                'prenom' => $utilisateur->prenom,
+                'email' => $utilisateur->email,
+                'role' => $utilisateur->role,
+                'est_authentifier' => $utilisateur->est_authentifier
+            );
+            return $info;
+        }
+        else{
+            return null;
+        }
     }
+    
 
-    public function cryptInfoutilisateur() {
+    public function cryptInfoUser() {
+        $utilisateur = $this->getUserSession();
         // Crypte les informations de l'utilisateur
-        $info_crypt = openssl_encrypt(serialize($this->filterDatautilisateur()), 'AES-128-ECB', $this->id_cle);
+        $info_crypt = openssl_encrypt(serialize($this->filterDataUser($utilisateur)), 'AES-128-ECB', $this->id_cle);
         return $info_crypt;
     }
 
     /**
-     * Summary of decryptInfoutilisateur
+     * Summary of decryptInfoUser
      * @param mixed $verif
      * @return mixed
      */
-    public function decryptInfoutilisateur($verif) {
+    public function decryptInfoUser() {
+        
         // Décrypte les informations de l'utilisateur
-        $info_decrypt = openssl_decrypt($verif, 'AES-128-ECB', $this->id_cle);
+        $info_decrypt = openssl_decrypt($this->verif, 'AES-128-ECB', $this->id_cle);
         return unserialize($info_decrypt);
     }
 
-    public function cookiesutilisateurInfo() {
+    public function cookiesUserInfo() {
         // Stocke les informations de l'utilisateur cryptées dans un cookie
         $cookie_name = "utilisateur_info";
-        $cookie_value = $this->cryptInfoutilisateur();
+        $cookie_value = $this->cryptInfoUser();
         setcookie($cookie_name, $cookie_value, time() + (86400 * 30), "/"); // 1 jour
     }
 
-    /**
-     * Summary of restrection
-     * @param mixed $role
-     * @return bool
-     */
-    public function restrection($role) {
+   
+    public function restrection() {
         // Vérifie si l'utilisateur a les permissions nécessaires pour accéder à une page
-        foreach ($role->permissions as $permission) {
+        foreach ($this->role->permissions as $permission) {
             if ($permission->nom_permission == 'restrection') {
                 return true;
             }
