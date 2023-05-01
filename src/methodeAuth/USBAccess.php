@@ -12,7 +12,7 @@ class USBAccess implements iAuthentification {
     }
 
     // Generate a new token for USB key authentication
-    public function generateToken() {
+    public function generateToken( $id_cle,$id_utilisateur) {
         // Generate a random string for the token
         $random_string = bin2hex(random_bytes(32));
         
@@ -33,7 +33,7 @@ class USBAccess implements iAuthentification {
         return $encrypted_token;
     }
     
-    public function Verify() {
+    public function Verify($nbr_tentatives_echouees,$verif ) {
         // Vérifier si l'utilisateur a fourni un jeton valide
         if (!isset($_POST['usb_token']) || empty($_POST['usb_token'])) {
             return false; // Le jeton n'a pas été fourni ou est vide
@@ -56,43 +56,54 @@ class USBAccess implements iAuthentification {
         }
     
         // Vérifier si le nombre de tentatives a été dépassé
-        if ($this->nbr_tentatives_echouees >= 3) {
+        if ($nbr_tentatives_echouees >= 3) {
             return false; // Le nombre de tentatives a été dépassé
         }
     
         // Vérifier si le jeton est valide
         if ($this->id_cle !== $token) {
             // Le jeton est invalide, incrémenter le nombre de tentatives échouées
-            $this->nbr_tentatives_echouees++;
-            $this->verif = false;
+            $nbr_tentatives_echouees++;
+            $verif = false;
             return false;
         }
     
         // Le jeton est valide, réinitialiser le nombre de tentatives échouées
-        $this->nbr_tentatives_echouees = 0;
-        $this->verif = true;
+        $nbr_tentatives_echouees = 0;
+        $verif = true;
         return true;
     }
 
-    public function IsConnect() {
+    public function IsConnect($est_authentifier ) {
         // Vérifie si l'utilisateur est connecté
-        if ($this->est_authentifier == true) {
+        if ($est_authentifier == true) {
             return true;
         }
         return false;
     }
 
-    public function filterDatautilisateur() {
+    /**
+     * Summary of filterDatautilisateur
+     * @param mixed $nom
+     * @param mixed $prenom
+     * @param mixed $email
+     * @param mixed $adresse
+     * @param mixed $role
+     * @param mixed $est_authentifier
+     * @param mixed $date_connexion
+     * @return array|bool|null
+     */
+    public function filterDatautilisateur($nom,$prenom,$email,$adresse,$role,$est_authentifier,$date_connexion) {
         // Retourne les informations de l'utilisateur filtrées
         return filter_var_array([
             'id_utilisateur' => $this->id_utilisateur,
-            'nom' => $this->nom,
-            'prenom' => $this->prenom,
-            'email' => $this->email,
-            'adresse' => $this->adresse,
-            'role' => $this->role,
-            'est_authentifier' => $this->est_authentifier,
-            'date_connexion' => $this->date_connexion
+            'nom' => $nom,
+            'prenom' => $prenom,
+            'email' => $email,
+            'adresse' => $adresse,
+            'role' => $role,
+            'est_authentifier' => $est_authentifier,
+            'date_connexion' => $date_connexion
         ], FILTER_SANITIZE_STRING);
     }
 
@@ -103,7 +114,7 @@ class USBAccess implements iAuthentification {
 
     public function getutilisateurInfo() {
         // Retourne les informations de l'utilisateur filtrées et stockées dans la session
-        $_SESSION['utilisateur'] = $this->filterDatautilisateur();
+        $_SESSION['utilisateur'] = filterDatautilisateur();
         return $_SESSION['utilisateur'];
     }
 
@@ -113,9 +124,14 @@ class USBAccess implements iAuthentification {
         return $info_crypt;
     }
 
-    public function decryptInfoutilisateur() {
+    /**
+     * Summary of decryptInfoutilisateur
+     * @param mixed $verif
+     * @return mixed
+     */
+    public function decryptInfoutilisateur($verif) {
         // Décrypte les informations de l'utilisateur
-        $info_decrypt = openssl_decrypt($this->verif, 'AES-128-ECB', $this->id_cle);
+        $info_decrypt = openssl_decrypt($verif, 'AES-128-ECB', $this->id_cle);
         return unserialize($info_decrypt);
     }
 
@@ -126,9 +142,14 @@ class USBAccess implements iAuthentification {
         setcookie($cookie_name, $cookie_value, time() + (86400 * 30), "/"); // 1 jour
     }
 
-    public function restrection() {
+    /**
+     * Summary of restrection
+     * @param mixed $role
+     * @return bool
+     */
+    public function restrection($role) {
         // Vérifie si l'utilisateur a les permissions nécessaires pour accéder à une page
-        foreach ($this->role->permissions as $permission) {
+        foreach ($role->permissions as $permission) {
             if ($permission->nom_permission == 'restrection') {
                 return true;
             }
