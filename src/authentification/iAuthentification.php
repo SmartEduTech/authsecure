@@ -9,9 +9,10 @@ interface iAuthentification{
     public function cryptInfoUser();
     public function decryptInfoUser();
     public function cookiesUserInfo();
-
     public function restrection();
     public function BlackIP();
 
 
 }
+
+?>
