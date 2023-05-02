@@ -1,16 +1,28 @@
 <?php
 
-class utilisateur {
-
-    public $id_utilisateur;
+class Utilisateur {
+    private $id_utilisateur;
     public $nom;
     public $prenom;
-    public $email;
+    private $email;
     public $adress;
-    public $mot_de_passe;
+    private $mot_de_passe;
     public $role;
     public $est_authentifier;
+
+    public function getEmail() {
+        return $this->email;
+    }
+
+    public function getIdUtilisateur() {
+        return $this->id_utilisateur;
+    }
+
+    public function getMotDePasse() {
+        return $this->mot_de_passe;
+    }
 }
+
 
 class permission {
 
@@ -25,6 +37,7 @@ class role {
     public $id_role;
     public $nom_role;
     public $permissions;
+    
 }
 
 class authentifier {
@@ -33,6 +46,12 @@ class authentifier {
     public $id_utilisateur;
     public $date_connexion;
     private $adresse_ip;
+
+    public function getAdresse_ip() {
+        return $this->adresse_ip;
+    }
+
+
 }
 
 class auth2fa {
@@ -43,6 +62,13 @@ class auth2fa {
     public $date_expiration_code;
     public $nbr_tentatives_echouees;
     public $verif;
+    public function getMotDePasse() {
+        return $this->mot_de_passe;
+    }
+    public function getCodeSecret() {
+        return $this->code_secret;
+    }
+
 }
 class usbaccess {
 
@@ -51,6 +77,9 @@ class usbaccess {
     public $date_expiration_cle;
     public $nbr_tentatives_echouees;
     public $verif;
+    public function getIdCle() {
+        return $this->id_cle;
+    }
 }
 
    
