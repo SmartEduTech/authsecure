@@ -1,17 +1,15 @@
 <?php
 class USBAccess implements iAuthentification {
     private $id_cle;
-    private $id_utilisateur;
+   
     private $date_expiration_cle;
     private $token;
     private $role;
-
-    function __construct($role,$id_cle, $id_utilisateur, $date_expiration_cle) {
-        $this->id_cle = $id_cle;
-        $this->id_utilisateur = $id_utilisateur;
-        $this->date_expiration_cle = $date_expiration_cle;
-        $this->role=$role;
+    
+    public function setRole($role){
+    $this->role = $role;
     }
+
 
     // Generate a new token for USB key authentication
     public function generateToken( $id_cle,$id_utilisateur) {
@@ -90,18 +88,21 @@ class USBAccess implements iAuthentification {
  
     public function filterDataUser(){
         $utilisateur= new utilisateur ;
+        $email = $utilisateur->getEmail();
+        $id_utilisateur = $utilisateur->getIdUtilisateur();
+        $mot_de_passe = $utilisateur->getMotDePasse();
         
         define('FILTER_SANITIZE_BOOLEAN', 520);
         define('FILTER_SANITIZE_STRING', 513);
     
           // Vérification des données de l'utilisateur
-          $id_utilisateur = filter_var($utilisateur->id_utilisateur, FILTER_SANITIZE_NUMBER_INT);
-        $nom = filter_var($utilisateur->nom, FILTER_SANITIZE_STRING);
-        $prenom = filter_var($utilisateur->prenom, FILTER_SANITIZE_STRING);
-        $email = filter_var($utilisateur->email, FILTER_SANITIZE_EMAIL);
-        $adress = filter_var($utilisateur->adress, FILTER_SANITIZE_STRING);
-        $mot_de_passe = filter_var($utilisateur->mot_de_passe, FILTER_SANITIZE_STRING);
-        $role = filter_var($utilisateur->role, FILTER_SANITIZE_STRING);
+          $id_utilisateur = filter_var($id_utilisateur, FILTER_SANITIZE_NUMBER_INT);
+        $nom = filter_var($utilisateur->nom,FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $prenom = filter_var($utilisateur->prenom, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $email = filter_var($email, FILTER_SANITIZE_EMAIL);
+        $adress = filter_var($utilisateur->adress, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $mot_de_passe = filter_var($mot_de_passe, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $role = filter_var($utilisateur->role, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
         $est_authentifier = filter_var($utilisateur->est_authentifier, FILTER_SANITIZE_BOOLEAN);
     
         return (object) [
@@ -115,7 +116,6 @@ class USBAccess implements iAuthentification {
             'est_authentifier' => $est_authentifier
         ];
     }
-    
     
     public function getUserSession(){
       // Vérification de la session de l'utilisateur
