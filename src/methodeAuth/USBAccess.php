@@ -1,5 +1,5 @@
 <?php
-class USBAccess implements iAuthentification {
+class USBAccess implements iAuthentification, iIdentiteRecover {
     private $id_cle;
    
     private $date_expiration_cle;
@@ -10,7 +10,23 @@ class USBAccess implements iAuthentification {
     $this->role = $role;
     }
 
-
+    function detecterCleUSB() {
+        // Obtenir la liste des lecteurs connectés à l'ordinateur en utilisant  la commande wmic
+        $output = shell_exec('wmic logicaldisk where drivetype=2 get deviceid');
+        // La sortie de wmic est une chaîne de caractères donc l'utilisation de la fonction explode sert à séparer la chaîne en un tableau de lignes.
+        $disques = explode("\r\r\n", trim($output));
+        // Crée un tableau vide qui contiendra les noms des clés USB détectées.
+        $cles_usb = array();
+    
+        foreach ($disques as $disque) {
+        // Vérifie si la ligne correspond à un nom de lecteur
+            if (preg_match('/^([A-Z]:)$/', $disque, $matches)) {
+                $cles_usb[] = $matches[1];
+            }
+        }
+    
+        return $cles_usb;
+    }
     // Generate a new token for USB key authentication
     public function generateToken( $id_cle,$id_utilisateur) {
         // Generate a random string for the token
@@ -35,6 +51,12 @@ class USBAccess implements iAuthentification {
   
     public function Verify() {
         $nbr_tentatives_echouees = 0;
+       
+        // Vérifier si une clé USB est détectée
+        $cles_usb = $this->detecterCleUSB();
+        if (empty($cles_usb)) {
+            return false; // Aucune clé USB détectée
+        }
     
         // Vérifier si l'utilisateur a fourni un jeton valide
         if (!isset($_POST['usb_token']) || empty($_POST['usb_token'])) {
@@ -148,11 +170,14 @@ class USBAccess implements iAuthentification {
         }
     }
     
-
+/**
+ * @var object|null $utilisateur
+ */
     public function cryptInfoUser() {
         $utilisateur = $this->getUserSession();
+
         // Crypte les informations de l'utilisateur
-        $info_crypt = openssl_encrypt(serialize($this->filterDataUser($utilisateur)), 'AES-128-ECB', $this->id_cle);
+        $info_crypt = openssl_encrypt(serialize($this->filterDataUser()), 'AES-128-ECB', $this->id_cle);
         return $info_crypt;
     }
 
@@ -193,11 +218,83 @@ class USBAccess implements iAuthentification {
         }
         return false;
     }
+   
 
 
+    public function sendInvitToRecover(){
+
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            // Retrieve the email address from the form
+            $email = $_POST['email'];
+          
+        // Vérifie si l'adresse email est valide
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
+        // Génère un token de récupération d'identité
+        $token = $this->generateToken($this->id_cle, $email);
+
+        // Envoie un email à l'utilisateur contenant le lien de récupération d'identité
+        $to = $email;
+        $subject = 'Récupération d\'identité - Cle USB';
+        $message = 'Bonjour, \n\n
+                    Vous avez demandé à récupérer votre identité via votre cle USB. \n\n
+                    Voici votre token:'.$token.' \n\n
+                    Cordialement, \n
+                    L\'équipe de monsite.com';
+        $headers = 'From: noreply@monsite.com' . "\r\n" .
+                   'Reply-To: noreply@monsite.com' . "\r\n" .
+                   'X-Mailer: PHP/' . phpversion();
+
+        if (mail($to, $subject, $message, $headers)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 }
 
+    public function sendRecoverIdentite(){
 
+        // Vérifier si l'utilisateur est autorisé à récupérer son identité avec une clé USB
+        $utilisateur = $this->getUserSession();
+        if (!$utilisateur) {
+            return false; // L'utilisateur n'est pas connecté
+        }
+
+        if (!$this->restrection('USB', $utilisateur)) {
+            return false; // L'utilisateur n'est pas autorisé à utiliser une clé USB pour récupérer son identité
+        }
+        
+        // Récupérer l'adresse email de l'utilisateur
+        $email = $utilisateur->getEmail();
+
+        // Génère un token de récupération d'identité
+        $token = $this->generateToken($this->id_cle, $email);
+
+        // Envoyer un e-mail à l'utilisateur avec le code de récupération
+        $destinataire = $email ;
+        $sujet = "Récupération d'identité";
+        $message = "Bonjour,\n\nVous avez demandé à récupérer votre identité sur notre site.\n\n
+                    Voici votre code de récupération : ".$token."\n\n
+                    Pour poursuivre la récupération de votre identité, \n\n
+                    veuillez suivre les instructions ou cliquer sur le lien fourni dans l'e-mail.\n\n
+                    Cordialement";
+        $headers = "From: webmaster@monsite.com" . "\r\n" .
+                "Reply-To: webmaster@monsite.com" . "\r\n" .
+                "X-Mailer: PHP/" . phpversion();
+
+        if (mail($destinataire, $sujet, $message, $headers)) {
+            return true; // L'e-mail a été envoyé avec succès
+        } else {
+            return false; // Une erreur est survenue lors de l'envoi de l'e-mail
+        }
+    }
+
+
+    public function verifyIdentite(){}
+    public function secureRecoverIdentite(){}
+
+}
 ?>
-
-
