@@ -15,8 +15,10 @@
         }
     ],
     "minimum-stability": "stable",
-    "require": {},
     "require-dev": {
-        "phpunit/phpunit":"^9.5"
+        "phpunit/phpunit":"^9.6"
+    },
+    "require": {
+        "swiftmailer/swiftmailer": "^6.3"
     }
 }
