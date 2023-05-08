@@ -219,8 +219,6 @@ class USBAccess implements iAuthentification, iIdentiteRecover {
         return false;
     }
    
-
-
     public function sendInvitToRecover(){
 
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -243,8 +241,8 @@ class USBAccess implements iAuthentification, iIdentiteRecover {
                     Voici votre token:'.$token.' \n\n
                     Cordialement, \n
                     L\'équipe de monsite.com';
-        $headers = 'From: noreply@monsite.com' . "\r\n" .
-                   'Reply-To: noreply@monsite.com' . "\r\n" .
+        $headers = 'From: ' . "\r\n" .
+                   'Reply-To: ' . "\r\n" .
                    'X-Mailer: PHP/' . phpversion();
 
         if (mail($to, $subject, $message, $headers)) {
@@ -281,9 +279,9 @@ class USBAccess implements iAuthentification, iIdentiteRecover {
                     Pour poursuivre la récupération de votre identité, \n\n
                     veuillez suivre les instructions ou cliquer sur le lien fourni dans l'e-mail.\n\n
                     Cordialement";
-        $headers = "From: webmaster@monsite.com" . "\r\n" .
-                "Reply-To: webmaster@monsite.com" . "\r\n" .
-                "X-Mailer: PHP/" . phpversion();
+        $headers = "From: " . "\r\n" .
+                   "Reply-To: " . "\r\n" .
+                   "X-Mailer: PHP/" . phpversion();
 
         if (mail($destinataire, $sujet, $message, $headers)) {
             return true; // L'e-mail a été envoyé avec succès
@@ -293,8 +291,79 @@ class USBAccess implements iAuthentification, iIdentiteRecover {
     }
 
 
-    public function verifyIdentite(){}
-    public function secureRecoverIdentite(){}
+    public function verifyIdentite(){
+    // Vérifier si l'utilisateur est authentifié avec une clé USB
+    $is_authenticated = $this->Verify();
+    if (!$is_authenticated) {
+        return false;
+    } 
+    // Récupérer les informations de l'utilisateur
+    $utilisateur = $this->getUserSession();
+    if (!$utilisateur) {
+        return false;
+    }
+    // Filtrer les données de l'utilisateur
+    $this->filterDataUser();
+    // Récupérer l'identité de l'utilisateur
+    $identite = $this->getUserInfo($utilisateur);
+    return $identite;
+
+    }
+    public function secureRecoverIdentite() {
+        // Vérifier si une clé USB est détectée
+        $cles_usb = $this->detecterCleUSB();
+        if (empty($cles_usb)) {
+            return false; // Aucune clé USB détectée
+        }
+    
+        // Vérifier si l'utilisateur est connecté
+        if (!$this->IsConnect()) {
+            return false; // L'utilisateur n'est pas connecté
+        }
+    
+        // Vérifier si l'utilisateur est autorisé à récupérer son identité
+        $utilisateur = $this->getUserSession();
+        if (!$this->restrection('ID',$utilisateur)) {
+            return false;
+        }
+    
+        // Vérifier si l'utilisateur a fourni un jeton valide
+        if (!isset($_POST['token']) || empty($_POST['token'])) {
+            return false; // Le jeton n'a pas été fourni ou est vide
+        }
+    
+        $token = $_POST['token'];
+    
+        // Decrypter le jeton
+        $secret_key = 'my_secret_key';
+        $token_string = openssl_decrypt($token, 'AES-256-CBC', $secret_key, 0, 'my_init_vector');
+    
+        // Extraire les informations du jeton
+        list($id_cle, $id_utilisateur, $date_expiration_clestamp, $random_string) = explode('|', $token_string);
+    
+        // Vérifier si le jeton est expiré
+        if (time() > $date_expiration_clestamp) {
+            return false; // Le jeton a expiré
+        }
+    
+        // Vérifier si le jeton est valide
+        if ($this->id_cle !== $id_cle) {
+            return false; // Le jeton est invalide
+        }
+    
+        // Récupérer les informations de l'utilisateur
+        $utilisateur = new utilisateur();
+        $utilisateur->getIdUtilisateur($id_utilisateur);
+      
+        // Retourner les informations de l'utilisateur
+        return array(
+            'nom' => $utilisateur-> nom,
+            'prenom' => $utilisateur->prenom,
+            'email' => $utilisateur-> getEmail(),
+            'mot_de_passe' => $utilisateur->getMotDePasse()
+        );
+    }
+    
 
 }
 ?>
