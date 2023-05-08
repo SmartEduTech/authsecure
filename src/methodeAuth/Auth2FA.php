@@ -1,4 +1,5 @@
 <?php 
+require_once '/path/to/swiftmailer/lib/autoload.php';
 
 class Auth2FA implements iAuthentification{
   private $utilisateur;
@@ -12,32 +13,35 @@ class Auth2FA implements iAuthentification{
      
   }
 
-
 // Fonction pour envoyer le code secret par email
-public function envoyer_code_secret($email) {
-  // Générer le code secret
-  $code_secret = rand(100000, 999999);
+public function envoyer_code_secret($email, $mot_de_passe, $URL) {
+    // Define and initialize the variable $URL
+    $URL = isset($URL) ? $URL : 'example.com';
 
-  // Configure les paramètres du serveur SMTP pour l'envoi d'e-mails
-  $transport = (new Swift_SmtpTransport('UVT.com', 123, 'tls'))
-      ->setUsername('UVT@example.com')
-      ->setPassword('UVT-password');
+    // Générer le code secret
+    $code_secret = rand(100000, 999999);
 
-  // Crée l'objet SwiftMailer avec le transport SMTP configuré
-  $mailer = new Swift_Mailer($transport);
+    // Configure les paramètres du serveur SMTP pour l'envoi d'e-mails
+    $transport = (new Swift_SmtpTransport($URL, 123, 'tls'))
+        ->setUsername($email)
+        ->setPassword($mot_de_passe);
 
-// Crée l'objet message
-$message = (new Swift_Message('Code secret pour la vérification à deux facteurs'))
-->setFrom(['UVT@example.com' => 'UVT'])
-->setTo([$email])
-->setBody("Votre code secret pour la vérification à deux facteurs est : " . $code_secret);
+    // Crée l'objet SwiftMailer avec le transport SMTP configuré
+    $mailer = new Swift_Mailer($transport);
 
-// Envoie le message
-$result = $mailer->send($message);
+    // Crée l'objet message
+    $message = (new Swift_Message('Code secret pour la vérification à deux facteurs'))
+        ->setFrom([$URL => $URL])
+        ->setTo([$email])
+        ->setBody("Votre code secret pour la vérification à deux facteurs est : " . $code_secret);
 
-// Retourne le code secret généré
-return $code_secret;
+    // Envoie le message
+    $result = $mailer->send($message);
+
+    // Retourne le code secret généré
+    return $code_secret;
 }
+
 
   public function Verify(){
     $nbr_tentatives_echouees = 0;
@@ -59,8 +63,6 @@ return $code_secret;
         return false;
     }
 }
-
-
 
 public function IsConnect() {
     $est_authentifier = true;
@@ -102,7 +104,6 @@ public function filterDataUser(){
     ];
 }
 
-
 public function getUserSession(){
   // Vérification de la session de l'utilisateur
   if(isset($_SESSION['utilisateur'])){
@@ -133,17 +134,12 @@ public function getUserSession(){
         return null;
     }
 }
-
-
-
   public function cryptInfoUser() {
     $utilisateur = $this->getUserSession();
     // Crypte les informations de l'utilisateur
     $info_crypt = openssl_encrypt(serialize($this->filterDataUser($utilisateur)), 'AES-128-ECB', $this->id_cle);
     return $info_crypt;
 }
-
-
 public function decryptInfoUser() {
     // Décrypte les informations de l'utilisateur
     $info_decrypt = openssl_decrypt($this->verif, 'AES-128-ECB', $this->id_cle);
@@ -171,7 +167,143 @@ public function decryptInfoUser() {
       }
       return false;
   }
+  public function sendInvitToRecover(){
+    
+    $utilisateur = new Utilisateur;
+    $email = $utilisateur->getEmail();
+    $nom = $utilisateur->nom;
+    $lien_reinitialisation ='www.exemple.com';
 
+    // Générer un code unique pour la réinitialisation de mot de passe
+    $code_reinitialisation = bin2hex(random_bytes(16));
+    // Générer un code de réinitialisation unique
+    $resetCode = bin2hex(random_bytes(16));
+    $expiryDate = date('Y-m-d H:i:s', strtotime('+1 hour'));
+
+    // Enregistrer le code de réinitialisation dans un fichier
+    $filename = "reset-codes.txt";
+    $data = array(
+        'user_id' => 123, // l'ID de l'utilisateur dont le mot de passe doit être réinitialisé
+        'reset_code' => $resetCode,
+        'reset_expiry' => $expiryDate
+    );
+    $file = fopen($filename, 'a');
+    fwrite($file, json_encode($data) . "\n");
+    fclose($file);
+
+    // Construire le corps du message
+    $message = "Bonjour $nom,\n\n
+                Vous avez demandé la réinitialisation de votre mot de passe.\n\n 
+                Veuillez cliquer sur le lien ci-dessous pour créer un nouveau mot de passe :\n\n
+                $lien_reinitialisation?code=$code_reinitialisation\n\n
+                Si vous n'avez pas demandé la réinitialisation de votre mot de passe, veuillez ignorer ce message.\n\n
+                Cordialement,\n";
+
+    // En-têtes du message
+    $headers = "From: VotreNom <noreply@votredomaine.com>". "\r\n" .
+               "Reply-To: VotreNom <support@votredomaine.com>". "\r\n" .
+               "Content-type: text/plain; charset=UTF-8.";
+
+    // Envoyer le message
+    $sujet = "Réinitialisation de mot de passe pour votre compte";
+    if (mail($email, $sujet, $message, $headers)) {
+        // Le message a été envoyé avec succès
+        return true;
+    } else {
+        // Une erreur s'est produite lors de l'envoi du message
+        return false;
+    }
+}
+  
+public function genererURLRecoverIdentite($id_utilisateur) {
+    $timestamp = time();
+    $hash = sha1($id_utilisateur . $timestamp . 'secret'); // Changez "secret" par une clé secrète appropriée
+    $url = "https://example.com/recover?user_id=$id_utilisateur&timestamp=$timestamp&hash=$hash";
+    return $url;
+}
+
+public function sendRecoverIdentite() {
+       // Vérifier si l'utilisateur est autorisé à récupérer son identité avec une clé USB
+       $utilisateur = $this->getUserSession();
+       if (!$utilisateur) {
+           return false; // L'utilisateur n'est pas connecté
+       }
+       
+       // Récupérer l'adresse email de l'utilisateur
+       $email = $utilisateur->getEmail();
+       $mot_de_passe = $utilisateur->getMotDePasse();
+       // Define and initialize the variable $URL
+       $URL = isset($URL) ? $URL : 'example.com';
+
+
+       // Génère un token de récupération d'identité
+       $code_secret = $this->envoyer_code_secret($email,$mot_de_passe,$URL);
+
+       // Envoyer un e-mail à l'utilisateur avec le code de récupération
+       $destinataire = $email ;
+       $sujet = "Récupération d'identité";
+       $message = "Bonjour,\n\nVous avez demandé à récupérer votre identité sur notre site.\n\n
+                   Voici votre code de récupération : ".$code_secret."\n\n
+                   Pour poursuivre la récupération de votre identité, \n\n
+                   veuillez suivre les instructions ou cliquer sur le lien fourni dans l'e-mail.\n\n
+                   Cordialement";
+       $headers = "From: " . "\r\n" .
+                  "Reply-To: " . "\r\n" .
+                  "X-Mailer: PHP/" . phpversion();
+
+       if (mail($destinataire, $sujet, $message, $headers)) {
+           return true; // L'e-mail a été envoyé avec succès
+       } else {
+           return false; // Une erreur est survenue lors de l'envoi de l'e-mail
+       }
+ 
+}
+  public function verifyIdentite(){
+   
+        // vérification du code secret
+        if ($this->code_secret != $_POST['code_secret']) {
+            // le code secret est invalide, on utilise les fonctions de l'interface pour récupérer l'identité
+            $this->sendInvitToRecover();
+            $this->sendRecoverIdentite();
+            $this->secureRecoverIdentite();
+            return false;
+        } else {
+            // le code secret est valide, on continue le processus d'authentification
+            return true;
+        }
+     
+  }
+  public function secureRecoverIdentite(){
+
+        // Vérifier que l'utilisateur est bien authentifié et qu'il a un compte actif
+        $utilisateur = $this->getUserSession();
+        if (!$utilisateur || !$utilisateur->IsConnect()) {
+            return false;
+        }
+    
+        // Vérifier que l'utilisateur a fourni une adresse e-mail valide
+        $email = isset($_POST['email']) ? $_POST['email'] : '';
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+    
+        // Générer un code de vérification aléatoire et l'envoyer à l'utilisateur par e-mail
+        $code = rand(100000, 999999);
+        $message = "Votre code de vérification est : " . $code;
+        mail($email, "Code de vérification", $message);
+    
+        // Stocker le code de vérification dans une variable de session pendant 5 minutes
+        $_SESSION['code_verif'] = array(
+            'utilisateur_id' => $utilisateur->id_utilisateur,
+            'adresse_email' => $email,
+            'code' => $code,
+            'expire' => time() + 300 // 5 minutes
+        );
+    
+        // Retourner true pour indiquer que le processus de récupération d'identité est sécurisé
+        return true;
+    
+  }
 
 }
 ?>
