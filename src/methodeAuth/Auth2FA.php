@@ -200,8 +200,8 @@ public function decryptInfoUser() {
                 Cordialement,\n";
 
     // En-têtes du message
-    $headers = "From: VotreNom <noreply@votredomaine.com>". "\r\n" .
-               "Reply-To: VotreNom <support@votredomaine.com>". "\r\n" .
+    $headers = "From: VotreNom ". "\r\n" .
+               "Reply-To: VotreNom ". "\r\n" .
                "Content-type: text/plain; charset=UTF-8.";
 
     // Envoyer le message
