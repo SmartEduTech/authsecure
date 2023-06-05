@@ -83,7 +83,7 @@ public function filterDataUser(){
     define('FILTER_SANITIZE_STRING', 513);
 
       // Vérification des données de l'utilisateur
-      $id_utilisateur = filter_var($id_utilisateur, FILTER_SANITIZE_NUMBER_INT);
+    $id_utilisateur = filter_var($id_utilisateur, FILTER_SANITIZE_NUMBER_INT);
     $nom = filter_var($utilisateur->nom,FILTER_SANITIZE_FULL_SPECIAL_CHARS);
     $prenom = filter_var($utilisateur->prenom, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
     $email = filter_var($email, FILTER_SANITIZE_EMAIL);
@@ -153,7 +153,7 @@ public function decryptInfoUser() {
 
   public function restrection() {
       // Vérifier que l'utilisateur a les autorisations nécessaires
-      if (!$this->utilisateur->role->permissions->contains('permission1')) {
+      if (!$this->utilisateur->role->permissions->contains('adminastrateur')) {
           return false;
       }
       return true;
@@ -302,8 +302,8 @@ public function sendRecoverIdentite() {
     
         // Retourner true pour indiquer que le processus de récupération d'identité est sécurisé
         return true;
-    
+  
   }
-
+  
 }
 ?>
