@@ -1,4 +1,10 @@
 <?php
+namespace Smartedutech\Authsecure\Authentification;
 
-class authentification {}
+class Authentification {
+
+    
+
+
+}
 ?>
