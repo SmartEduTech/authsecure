@@ -1,4 +1,6 @@
 <?php
+namespace Smartedutech\Authsecure\Authentification;
+
 interface iAuthentification{
  
     public function Verify();
