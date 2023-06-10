@@ -1,40 +1,74 @@
 <?php
 namespace Smartedutech\Authsecure\methodeAuth;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 use Smartedutech\Authsecure\Authentification\iAuthentification;
 use Firebase\JWT\JWT;
 
-class Auth2FA {
+
+
+class Auth2FA  {
+ /**
+   * @var string
+   */
   private $utilisateur;
+
+  /**
+   * @var string
+   */
   private $code_secret;
+
+  /**
+   * @var string
+   */
   private $id_cle;
 
-  public function __construct($id_cle, $utilisateur, $code_secret) {
+  /**
+   * @var mixed
+   */
+  private $verif;
+
+  public function __construct($id_cle, $utilisateur, $code_secret , $verif) {
     $this->utilisateur = $utilisateur;
     $this->code_secret = $code_secret;
     $this->id_cle = $id_cle;
+    $this->verif = $verif;
   }
 
   // Fonction pour envoyer le code secret par email
-  public function envoyer_code_secret($email, $mot_de_passe, $URL) {
+  public function envoyer_code_secret($email, $URL) {
+    try {
+      // Génération du code secret avec JWT
+      $payload = array(
+        "code_secret" => $this->code_secret,
+      );
+      $jwt = JWT::encode($payload, $this->code_secret, 'HS256');
 
+      // Configuration de l'envoi de courriel avec PHPMailer
+      $mail = new PHPMailer(true);
+      $mail->SMTPDebug = 0;
+      $mail->isSMTP();
+      $mail->Host = 'smtp.gmail.com';
+      $mail->SMTPAuth = true;
+      $mail->Username = "amal.korbi@etudiant-isi.utm.tn";
+      $mail->Password = "";
+      $mail->SMTPSecure = 'ssl';
+      $mail->Port = 465;
+      $mail->setFrom('amal.korbi@etudiant-isi.utm.tn', 'Mailer');
+      $mail->addAddress($email);
+      $mail->isHTML(true);
+      $mail->Subject = 'Sujet du courriel';
+      $mail->Body = 'Contenu du courriel : ' . $jwt.'voici l\'URL : test.uvt.tn/candidature/public/admin/gestauth/login/token/{codegenerer} ';
+      $mail->AltBody = 'Contenu du courriel en texte brut pour les clients de messagerie sans HTML';
 
-    // Configurer les destinataires
-    $to = $email;
-
-    // Configurer l'en-tête et le corps du courriel
-    $subject = 'Sujet du courriel';
-    $message = 'Contenu du courriel : ' . $mot_de_passe;
-    $headers = "From: amal.korbi@etudiant-isi.utm.tn\r\n" .
-               "Reply-To: amal.korbi@etudiant-isi.utm.tn\r\n" .
-               "X-Mailer: PHP/" . phpversion();
-
-    // Envoyer le courriel
-    if (mail($to, $subject, $message, $headers)) {
+      // Envoyer le courriel
+      $mail->send();
       echo "Le courriel a été envoyé avec succès.";
-    } else {
-      echo "Une erreur s'est produite lors de l'envoi du courriel.";
+    } catch (Exception $e) {
+      echo 'Une erreur s\'est produite lors de l\'envoi du courriel. Erreur Mailer : ', $mail->ErrorInfo;
     }
   }
+  
 
   public function Verify() {
     $nbr_tentatives_echouees = 0;
@@ -155,7 +189,7 @@ class Auth2FA {
 
   public function sendRecoverIdentite() {
     // Envoie un courriel pour récupérer l'identité de l'utilisateur
-    $email = 'exemple@example.com';
+    $email = 'amal.korbi@etudiant-isi.utm.tn';
     $sujet = 'Récupération identité';
     $message = 'Bonjour, veuillez suivre le lien suivant pour récupérer votre identité : ' . $this->genererURLRecoverIdentite();
     mail($email, $sujet, $message);
