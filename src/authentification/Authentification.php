@@ -1,5 +1,5 @@
 <?php
-namespace Smartedutech\Authsecure\Authentification;
+namespace Smartedutech\Authsecure\authentification;
 
 class Authentification {
 
